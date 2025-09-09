@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pixel AI Chat</title>
+  <!-- Using Tailwind CSS for a modern look -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    /* Custom scrollbar for a cleaner look */
+    #chat::-webkit-scrollbar {
+      width: 8px;
+    }
+    #chat::-webkit-scrollbar-track {
+      background: #415a77;
+    }
+    #chat::-webkit-scrollbar-thumb {
+      background-color: #778da9;
+      border-radius: 10px;
+      border: 2px solid #415a77;
+    }
+    .msg-bubble {
+        animation: pop-in 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+    }
+    @keyframes pop-in {
+      0% {
+        transform: scale(0.5);
+        opacity: 0;
+      }
+      100% {
+        transform: scale(1);
+        opacity: 1;
+      }
+    }
+    .typing-indicator span {
+        display: inline-block;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background-color: #e0e1dd;
+        animation: bounce 1.3s infinite;
+    }
+    .typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
+    .typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes bounce {
+        0%, 60%, 100% { transform: translateY(0); }
+        30% { transform: translateY(-8px); }
+    }
+  </style>
+</head>
+<body class="bg-[#0d1b2a] text-gray-200 font-sans flex flex-col h-screen">
+
+  <!-- Header -->
+  <header class="bg-[#1b263b]/80 backdrop-blur-sm shadow-lg p-4 text-center border-b border-gray-700">
+    <h1 class="text-xl font-bold text-white">🤖 Pixel AI Chat</h1>
+  </header>
+
+  <!-- Chat Messages Area -->
+  <div id="chat" class="flex-1 p-4 md:p-6 space-y-4 overflow-y-auto">
+    <!-- Messages will be added here -->
+  </div>
+
+  <!-- Message Input Form -->
+  <div class="p-4 bg-[#1b263b]/80 backdrop-blur-sm border-t border-gray-700">
+    <form id="form" class="flex items-center max-w-4xl mx-auto">
+      <input id="input" class="flex-1 bg-[#415a77] text-white placeholder-gray-400 px-4 py-3 rounded-l-full border-2 border-transparent focus:border-cyan-500 focus:outline-none transition-all duration-300" placeholder="Type your message..." autocomplete="off" />
+      <button class="bg-cyan-600 hover:bg-cyan-500 text-white font-bold px-6 py-3 rounded-r-full transition-colors duration-300">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-send"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+      </button>
+    </form>
+  </div>
+
+  <script>
+    const chat = document.getElementById("chat");
+    const form = document.getElementById("form");
+    const input = document.getElementById("input");
+    
+    // Template for the typing indicator
+    const typingIndicatorHTML = `
+      <div class="flex justify-start items-center space-x-2">
+        <div class="typing-indicator">
+          <span></span><span></span><span></span>
+        </div>
+      </div>
+    `;
+
+    // Function to add a message to the chat
+    function addMessage(text, type) {
+      const wrapper = document.createElement("div");
+      wrapper.className = `flex w-full msg-bubble ${type === 'user' ? 'justify-end' : 'justify-start'}`;
+      
+      const msg = document.createElement("div");
+      msg.className = `p-3 rounded-2xl max-w-lg md:max-w-xl lg:max-w-2xl shadow-md ${type === 'user' ? 'bg-cyan-700 text-white rounded-br-none' : 'bg-[#415a77] text-white rounded-bl-none'}`;
+      
+      // Use innerHTML to render the typing indicator
+      if (type === 'typing') {
+        msg.innerHTML = text;
+      } else {
+        msg.textContent = text;
+      }
+      
+      wrapper.appendChild(msg);
+      chat.appendChild(wrapper);
+      chat.scrollTop = chat.scrollHeight; // Auto-scroll to the latest message
+      return wrapper;
+    }
+
+    // Handle form submission
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const userMessage = input.value.trim();
+      if (!userMessage) return;
+
+      addMessage(userMessage, "user");
+      input.value = "";
+      input.focus();
+
+      // Show typing indicator
+      const typingMessageElement = addMessage(typingIndicatorHTML, "typing");
+
+      try {
+        const res = await fetch("/api/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message: userMessage }),
+        });
+
+        if (!res.ok) {
+            const errorData = await res.json();
+            throw new Error(errorData.error || "Something went wrong");
+        }
+        
+        const data = await res.json();
+        
+        // Replace typing indicator with the actual reply
+        const botMessageContainer = typingMessageElement.querySelector('div');
+        botMessageContainer.innerHTML = ''; // Clear the typing dots
+        botMessageContainer.textContent = data.reply || "Error: No reply found.";
+
+      } catch (err) {
+        // Show error in the message bubble
+        const botMessageContainer = typingMessageElement.querySelector('div');
+        botMessageContainer.classList.add('bg-red-500'); // Make error messages red
+        botMessageContainer.innerHTML = '';
+        botMessageContainer.textContent = "Error: " + err.message;
+      }
+    });
+  </script>
+</body>
+</html>
