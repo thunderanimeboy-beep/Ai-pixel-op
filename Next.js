@@ -18,7 +18,7 @@ export default async function handler(req, res) {
     // --- API Key Configuration ---
     // Your API key is placed here.
     // For production, it's still best to use environment variables for security.
-    const apiKey = "AIzaSyD1LZxj5b9bneKYRmYDQ9mFipBjdTLJq-E";
+    const apiKey = "";
     const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
 
     if (!apiKey || apiKey === "YOUR_GEMINI_API_KEY") {
